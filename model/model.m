@@ -69,9 +69,6 @@ hold off
 %h_fig = figure;
 
 
-xlim([-5,5]);
-ylim([-5,5]);
-
 
 for i = 1:iterations-1
     t(i) = (i-1)*h;
@@ -87,6 +84,18 @@ for i = 1:iterations-1
 %     value = double(get(gcf,'CurrentCharacter'));
 %     disp(value)
 
+
+    % Add gravity:
+    G = -m * 9.81; %in inertial frame    
+
+    %transfer to body-frame TODO: use Rzyx
+    X = cos(eta(3))*G; 
+    Z = sin(eta(3))*G;
+    
+    u(1) = Z;
+    u(2) = X;
+
+
     tau = B * u;
 
     % state-dependent time-varying matrices
@@ -96,7 +105,6 @@ for i = 1:iterations-1
 
     R = Rzyx(0,0,eta(3)); %Rotation matrix from body to inertial
 
-    
 
     nu_dot = Minv * (tau - CRB * nu);
 
@@ -115,6 +123,9 @@ for i = 1:iterations-1
     
     nus(:,i+1) = nu;
     etas(:,i+1) = eta;
+
+    xlim([-5 5]+eta(1));
+    ylim([-5 5]+eta(2));
     pause(0.01);
 
 end
