@@ -1,0 +1,4 @@
+Todo prosjekt:
+
+-Start med constant coeff of lift,drag.
+-Kan gå klikk med syk modell siden 48 beardMclain

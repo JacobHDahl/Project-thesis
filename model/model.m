@@ -28,6 +28,9 @@ m = 10;          % mass (kg)
 Iz = 500;         % yaw moment of inertia (kg m^3)
 xg = 0;              % CG x-ccordinate (m)
 
+% Aero parameters
+rho = 1.112; %air density at 1000m above sea level https://www.engineeringtoolbox.com/standard-atmosphere-d_604.html
+
 h = 0.01; %timestep
 
 iterations = 200;
@@ -85,12 +88,35 @@ for i = 1:iterations-1
 %     disp(value)
 
 
+    % Add Aerodynamic forces
+    %rho = Air density
+    %V_a = Velocity of vehicle through surrounding air mass
+    %S = Planform area of wing (overflateareal)
+    %C_L = Coefficient of lift
+    %C_D = Coefficient of drag
+    %C_M = Coefficient of aero moment drag
+    %c = Mean  chord of wing (arm from center of pressure to CG(?))
+
+    %F_lift = 0.5 * rho * V_a*V_a * S * C_L %Lift force in stability frame
+    %F_drag = 0.5 * rho * V_a*V_a * S * C_D %Drag force in stability frame
+    %M_aero = 0.5 * rho * V_a*V_a * S * c * C_M % Drag moment in stability
+    
+    %From stability frame to body frame:
+    %[F_x;F_z] = [cos(alpha), -sin(alpha); sin(alpha), cos(alpha)];
+
     % Add gravity:
-    G = -m * 9.81; %in inertial frame    
+    G = -m * 9.81; %in inertial frame   
+
+
 
     %transfer to body-frame TODO: use Rzyx
     X = cos(eta(3))*G; 
     Z = sin(eta(3))*G;
+
+
+    F_lift = 0.5 * rho * V_a*V_a * S * C_L;
+    F_drag = 0.5 * rho * V_a*V_a * S * C_D;
+    %M_aero = 0.5 * rho * V_a*V_a * S * c * C_M; 
     
     u(1) = Z;
     u(2) = X;
@@ -119,26 +145,14 @@ for i = 1:iterations-1
     g.Matrix = makehgtform('translate',eta_anim_prev + t(i)*(eta_anim-eta_anim_prev), ...
                          'zrotate',etas(3,i) + t(i)*(eta(3)-etas(3,i)));
     drawnow
-    %plot(eta(1),eta(2),'o')
     
     nus(:,i+1) = nu;
     etas(:,i+1) = eta;
 
     xlim([-5 5]+eta(1));
     ylim([-5 5]+eta(2));
-    pause(0.01);
+    pause(h); %This relates to the perceived time spent in the simulation. Relate to time t. TODO
 
 end
-% limitScaling = 1.1;
-% 
-% xlim([limitScaling*min(etas(1,:)),limitScaling*max(etas(1,:))])
-% ylim([limitScaling*min(etas(2,:)),limitScaling*max(etas(2,:))])
-
-% x = etas(1,:);
-% z = etas(2,:);
-% 
-% figure(1)
-% plot(x,z)
-
 
 
