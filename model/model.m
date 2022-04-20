@@ -33,7 +33,7 @@ rho = 1.112; %air density at 1000m above sea level https://www.engineeringtoolbo
 
 h = 0.01; %timestep
 
-iterations = 200;
+iterations = 2000;
 
 % rigid-body mass matrix
 MRB = [ m 0    0 
@@ -48,11 +48,11 @@ etas = zeros(3,iterations);
 
 us = zeros(3,iterations);
 
-us(1,:) = 100*sin(linspace(0,10,iterations));%0.1 * ones(1,iterations);%  %;
-us(2,:) = 10*ones(1,iterations);
-us(3,:) = 100*ones(1,iterations);
+us(1,:) = 1000*ones(1,iterations);
+%us(2,:) = 100*ones(1,iterations);
+%us(3,:) = deg2rad(10)*ones(1,iterations);
 
-eta_init = [0, 0, 0]'; % x, z, theta in inertial frame
+eta_init = [0, 0, deg2rad(7)]'; % x, z, theta in inertial frame
 nu_init = [0, 0, 0]'; % v(velocity_x), w(velocity_z), omega(rot_velocity) in body frame
 
 nus(:,1) = nu_init;
@@ -63,15 +63,15 @@ etas(:,1) = eta_init;
 t = zeros(1,iterations);
 
 
-x = [-1  , 1/3, 1/3, 1, 1/3, 1/3,-1  ];
-y = [-1/3,-1/3,-1/2, 0, 1/2, 1/3, 1/3];
-g = hgtransform;
-patch('XData',x,'YData',y,'FaceColor','blue','Parent',g)
-hold off
+% x = [-1  , 1/3, 1/3, 1, 1/3, 1/3,-1  ];
+% y = [-1/3,-1/3,-1/2, 0, 1/2, 1/3, 1/3];
+% g = hgtransform;
+% patch('XData',x,'YData',y,'FaceColor','blue','Parent',g)
+% hold off
 
 %h_fig = figure;
 
-
+anim = animation;
 
 for i = 1:iterations-1
     t(i) = (i-1)*h;
@@ -110,16 +110,32 @@ for i = 1:iterations-1
 
 
     %transfer to body-frame TODO: use Rzyx
-    X = cos(eta(3))*G; 
-    Z = sin(eta(3))*G;
+    F_x_g = cos(eta(3))*G; 
+    F_z_g = sin(eta(3))*G;
+
+    V_a = nu(2);
+    alpha = deg2rad(10);%constant, assuming no wind
+    
+    C_L = 0.8; %
+    C_D = 0.1; %
+    S = 1;
 
 
     F_lift = 0.5 * rho * V_a*V_a * S * C_L;
     F_drag = 0.5 * rho * V_a*V_a * S * C_D;
     %M_aero = 0.5 * rho * V_a*V_a * S * c * C_M; 
     
-    u(1) = Z;
-    u(2) = X;
+    %Rotation from stability frame to body frame
+    R_stab_to_body = [cos(alpha),-sin(alpha);
+                        sin(alpha), cos(alpha)];
+
+    F_aero = R_stab_to_body * [F_drag;F_lift];
+
+    F_x_aero = F_aero(1);
+    F_z_aero = F_aero(2);
+    
+    u(1) = u(1)+F_z_g- F_z_aero;
+    u(2) = u(2)+F_x_g - F_x_aero;
 
 
     tau = B * u;
@@ -139,18 +155,11 @@ for i = 1:iterations-1
     nu = nu + h * nu_dot;
     eta = eta + h * eta_dot;
 
-    eta_anim = [eta(1), eta(2), 0];
-    eta_anim_prev = [etas(1,i), etas(2,i), 0];
     
-    g.Matrix = makehgtform('translate',eta_anim_prev + t(i)*(eta_anim-eta_anim_prev), ...
-                         'zrotate',etas(3,i) + t(i)*(eta(3)-etas(3,i)));
-    drawnow
-    
+    anim=anim.update(eta);
     nus(:,i+1) = nu;
     etas(:,i+1) = eta;
 
-    xlim([-5 5]+eta(1));
-    ylim([-5 5]+eta(2));
     pause(h); %This relates to the perceived time spent in the simulation. Relate to time t. TODO
 
 end
