@@ -1,0 +1,13 @@
+function xnew= RK4(f,time,dt,xx,u)
+xd=feval(f,time,xx,u);
+xa=xd*dt;
+x =xx + 0.5*xa;
+t =time + 0.5*dt;
+xd=feval(f,t,x,u);
+q = xd*dt;
+x = xx + 0.5*q;
+xa= xa + 2.0*q;
+xd= feval(f,t,x,u);
+q = xd*dt;
+x = xx + q;
+xa= xa + 2.0*q;

@@ -24,12 +24,12 @@
 % Sett på to vinger, 
 
 % ship parameters 
-m = 10;          % mass (kg)
-Iz = 500;         % yaw moment of inertia (kg m^3)
+m = 13.5;          % mass (kg)
+Iy = 1.135;         % pitch moment of inertia (kg m^3)
 xg = 0;              % CG x-ccordinate (m)
 
 % Aero parameters
-rho = 1.112; %air density at 1000m above sea level https://www.engineeringtoolbox.com/standard-atmosphere-d_604.html
+rho = 1.2682; %air density 
 
 h = 0.01; %timestep
 
@@ -38,7 +38,7 @@ iterations = 2000;
 % rigid-body mass matrix
 MRB = [ m 0    0 
         0 m    m*xg
-        0 m*xg Iz ];
+        0 m*xg Iy ];
 Minv = inv(MRB);
 
 B = eye(3);
@@ -52,8 +52,8 @@ us(1,:) = 1000*ones(1,iterations);
 %us(2,:) = 100*ones(1,iterations);
 %us(3,:) = deg2rad(10)*ones(1,iterations);
 
-eta_init = [0, 0, deg2rad(7)]'; % x, z, theta in inertial frame
-nu_init = [0, 0, 0]'; % v(velocity_x), w(velocity_z), omega(rot_velocity) in body frame
+eta_init = [0, 0, deg2rad(5)]'; % x, z, theta in inertial frame
+nu_init = [30, 0, 0]'; % v(velocity_x), w(velocity_z), omega(rot_velocity) in body frame
 
 nus(:,1) = nu_init;
 etas(:,1) = eta_init;
@@ -79,13 +79,7 @@ for i = 1:iterations-1
     eta = etas(:,i);
     u = us(:,i);
 
-%     k = waitforbuttonpress;
-%     % 28 leftarrow
-%     % 29 rightarrow
-%     % 30 uparrow
-%     % 31 downarrow
-%     value = double(get(gcf,'CurrentCharacter'));
-%     disp(value)
+   
 
 
     % Add Aerodynamic forces
@@ -97,28 +91,24 @@ for i = 1:iterations-1
     %C_M = Coefficient of aero moment drag
     %c = Mean  chord of wing (arm from center of pressure to CG(?))
 
-    %F_lift = 0.5 * rho * V_a*V_a * S * C_L %Lift force in stability frame
-    %F_drag = 0.5 * rho * V_a*V_a * S * C_D %Drag force in stability frame
-    %M_aero = 0.5 * rho * V_a*V_a * S * c * C_M % Drag moment in stability
-    
-    %From stability frame to body frame:
-    %[F_x;F_z] = [cos(alpha), -sin(alpha); sin(alpha), cos(alpha)];
-
     % Add gravity:
     G = -m * 9.81; %in inertial frame   
+
+ 
 
 
 
     %transfer to body-frame TODO: use Rzyx
-    F_x_g = cos(eta(3))*G; 
-    F_z_g = sin(eta(3))*G;
+    F_x_g = sin(eta(3))*G; 
+    F_z_g = cos(eta(3))*G;
 
-    V_a = nu(2);
-    alpha = deg2rad(10);%constant, assuming no wind
+    V_a = nu(1);
+    alpha = deg2rad(5);%constant, assuming no wind
     
     C_L = 0.8; %
-    C_D = 0.1; %
-    S = 1;
+    C_D = 0.2; %
+    S = 0.55;   %taken from beard&McLain appendix E
+    %c = 0.19; %taken from beard&McLain appendix E
 
 
     F_lift = 0.5 * rho * V_a*V_a * S * C_L;
@@ -126,16 +116,39 @@ for i = 1:iterations-1
     %M_aero = 0.5 * rho * V_a*V_a * S * c * C_M; 
     
     %Rotation from stability frame to body frame
-    R_stab_to_body = [cos(alpha),-sin(alpha);
-                        sin(alpha), cos(alpha)];
+    R_stab_to_body = [cos(-alpha),-sin(-alpha);
+                        sin(-alpha), cos(-alpha)];
 
     F_aero = R_stab_to_body * [F_drag;F_lift];
 
     F_x_aero = F_aero(1);
     F_z_aero = F_aero(2);
+
+
+    % Model thrust force
+    %P_0 = static pressure
+    %V_exit = exit speed as air leaves propeller
+    %k_motor = constant motor value
+    %delta_t = pulse-width-command to propeller
+    %S_prop = area swept by propeller
+    %C_prop = propeller constant
     
-    u(1) = u(1)+F_z_g- F_z_aero;
-    u(2) = u(2)+F_x_g - F_x_aero;
+    %V_exit = k_motor*delta_t;
+    %P_upstream = P_0 + 0.5*rho*V_a*V_a;
+    %P_downstream = P_0 + 0.5*rho*V_exit*V_exit;
+
+    %F_xprop =
+    %0.5*rho*S_prop*C_prop*((k_motor*delta_t)*(k_motor*delta_t)-V_a*V_a);
+    S_prop = 0.2027;%taken from beard&McLain appendix E
+    C_prop = 1; %just tuning here?
+    delta_t = 0.5; %thrust variable
+    k_motor = 80; %taken from beard&McLain appendix E
+
+    F_xprop=0;%0.5*rho*S_prop*C_prop*((k_motor*delta_t)*(k_motor*delta_t)-V_a*V_a);
+
+    u(1) = u(1)+F_xprop+F_x_g - F_x_aero;
+    u(2) = F_z_aero+F_z_g;
+    
 
 
     tau = B * u;
@@ -146,6 +159,7 @@ for i = 1:iterations-1
                     xg 0  0  ];
 
     R = Rzyx(0,0,eta(3)); %Rotation matrix from body to inertial
+
 
 
     nu_dot = Minv * (tau - CRB * nu);
