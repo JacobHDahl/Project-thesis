@@ -49,7 +49,7 @@ classdef animation < handle
                 figure(1); clf;
                 pe = state(1); pd = state(2); theta = state(3);
                 self=self.drawBody(pe, pd, theta);
-                title('Dette er dritt as')
+                title('Spacecraft')
                 xlabel('East')
                 ylabel('Down')  % set the vieew angle for figure
                 axis([self.xlim_min,self.xlim_max,self.ylim_min,self.ylim_max]);
