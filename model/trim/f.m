@@ -91,7 +91,7 @@ Fz_G = FG(2);
 
 %Compute propeller thrust
 Fx_thrust=0.5*rho*S_prop*C_prop*((k_motor*deltaT)*(k_motor*deltaT)-Va*Va);
-fancyAero = 0;
+fancyAero = 1;
 if fancyAero
 
     [CL_ofAlpha, CD_ofAlpha] = computeAeroCoeffs(alpha, alpha_0, M, S, b, e, CL0, CD_p);

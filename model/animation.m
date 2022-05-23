@@ -49,7 +49,7 @@ classdef animation < handle
                 figure(1); clf;
                 pe = state(1); pd = state(2); theta = state(3);
                 self=self.drawBody(pe, pd, theta);
-                title('Dette er dritt as')
+                title('UAV')
                 xlabel('East')
                 ylabel('Down')  % set the vieew angle for figure
                 axis([self.xlim_min,self.xlim_max,self.ylim_min,self.ylim_max]);
@@ -66,8 +66,10 @@ classdef animation < handle
         end
 
         function self = drawBody(self, pe, pd, theta)
-            Vertices = self.rotate(self.Vertices,theta);   % rotate rigid body  
-            Vertices = self.translate(Vertices, pe, pd);     % translate after rotation
+            Vertices = self.rotate(self.Vertices,theta); 
+            Vertices = self.translate(Vertices, pe, pd);
+              % rotate rigid body  
+                 % translate after rotation
             
             if isempty(self.body_handle)
                 self.body_handle = patch('Vertices', Vertices', 'Faces', self.Faces,...
@@ -76,6 +78,7 @@ classdef animation < handle
             else
                 set(self.body_handle,'Vertices',Vertices','Faces',self.Faces);
                 drawnow
+                
             end
         end 
         

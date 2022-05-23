@@ -3,6 +3,7 @@ function [res, deltaT,deltaE,u_init,w_init,theta_init] =  trim(Va,gamma)
 %the trim conditions of the airplane using the angle of attack(alpha)
 
 %Va = 24 gives approx the best results for level flight(gamma=0)
+addpath("C:\Users\jacob\Documents\MATLAB\Project-thesis\model");
 
 %Set up the function to optimize. (x_dot-f(x,u))^2
 func = @(x)(([0,0,0]-f(x,[Va,gamma])')*([0,0,0]-f(x,[Va,gamma])')');
