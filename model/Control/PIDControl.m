@@ -67,29 +67,33 @@ a_theta_1 = -0.25*rho*Va*c*S*CM_q*c/Jy;
 a_theta_2 = -0.5*rho*(Va^2)*c*S*CM_alpha/Jy;
 a_theta_3 = 0.5*rho*(Va^2)*c*S*CM_deltaE/Jy;
 
-deltaE_min = -deg2rad(45);
-deltaE_max = deg2rad(45);
-theta_error_max = deg2rad(20);
+deltaE_min = -deg2rad(60);
+deltaE_max = deg2rad(60);
+theta_error_max = deg2rad(10);
 
 Kp_theta = -deltaE_max/theta_error_max;
 
 KDC_theta = (Kp_theta*a_theta_3)/(a_theta_2+Kp_theta*a_theta_3);
 
 omega_n_theta = sqrt(a_theta_2 + Kp_theta); %Bandwidth
-zeta_theta = 0.3; %Damping. Tunable
+zeta_theta = 0.9; %Damping. Tunable
 
 Kd_theta = (2*zeta_theta*omega_n_theta - a_theta_1)/a_theta_3;
 Ki_theta = 0;
 
 % ALTITUDE HOLD  USING PITCH
 W_h = 5; %Bandwidth multiplier. Tunable.
-zeta_h = 1; %Damping. Tunable
+zeta_h = 20; %Damping. Tunable
 omega_n_h = (1/W_h)*omega_n_theta;
 
-Ki_h = 2*(omega_n_h^2)/(KDC_theta*Va);
+Ki_h = 0.3*(omega_n_h^2)/(KDC_theta*Va);
 Kp_h = (2*zeta_h*omega_n_h)/(KDC_theta*Va);
 
+
 height_target = 0;
+% if called > 5000
+%     height_target = 40;
+% end
 height_error = height_target - eta(2);
 height_error_integrated = height_error_integrated + h*height_error;
 
@@ -125,12 +129,9 @@ theta_error = theta_target - eta(3);
 theta_error_integrated = theta_error_integrated + h*theta_error;
 
 
-deltaE = 3*Kp_theta*theta_error + Ki_theta*theta_error_integrated - 3*Kd_theta*nu(3);
+deltaE = Kp_theta*theta_error + Ki_theta*theta_error_integrated - Kd_theta*nu(3);
 deltaT = deltaT_trim + Kpv1*Va_error + Kiv1*Va_error_integrated;
-if called < 100
-    deltaE = deltaE_trim;
-    deltaT = deltaT_trim;
-end
+
 
 if deltaT < 0
     deltaT = 0;

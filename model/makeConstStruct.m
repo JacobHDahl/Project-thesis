@@ -1,6 +1,6 @@
 clear;clc
 h = 0.0001; %timestep
-iterations = 100000;
+iterations = 1000000;
 
 % ship parameters 
 m = 25;          % mass (kg)
@@ -46,6 +46,7 @@ theta_trim = 0.0828;
 Va_trim = 30;
 gamma_trim = 0;
 alpha_trim = 0.0749;%0.0951;
+q_trim = 0;
 
 
 save ConstFile *
