@@ -1,4 +1,4 @@
-function [deltaT, deltaE] = PIDControl(eta, nu, ConstStruct)
+function [deltaT, deltaE] = DynamicInv(eta, nu, ConstStruct)
 %PIDCONTROL Summary of this function goes here
 %   Detailed explanation goes here
 persistent initiated
@@ -30,6 +30,9 @@ deltaE_trim = ConstStruct.deltaE_trim;
 deltaT_trim = ConstStruct.deltaT_trim;
 Va_trim = ConstStruct.Va_trim;
 alpha_trim = ConstStruct.alpha_trim;
+q_trim = ConstStruct.q_trim;
+u_trim = ConstStruct.u_trim;
+w_trim = ConstStruct.w_trim;
 
 
 if (isempty(initiated))
@@ -40,6 +43,15 @@ if (isempty(initiated))
     called = 1;
 
 end
+theta = eta(3);
+R_body_to_inertial = [cos(theta), sin(theta);
+                        -sin(theta), cos(theta)];
+
+height_target = 0;
+% if called > 5000
+%     height_target = 40;
+% end
+height_error = height_target - eta(2);
 
 % AIR SPEED HOLD USING THROTTLE
 
@@ -55,39 +67,15 @@ a_v2 = (1/m)*rho*S_prop*C_prop*k_motor^2 * deltaT_trim;
 Kpv1 = (2*zeta_v1*omega_n_v1 - a_v1) / a_v2;
 Kiv1 = omega_n_v1^2 / a_v2;
 
-Va_target = Va_trim;
+Va_target = Va_trim + 5;%(height_error/2);
+disp("va_target")
+disp(Va_target)
 
 Va_error = Va_target - Va;
 Va_error_integrated = Va_error_integrated + h*Va_error;
 
-% PITCH ATTITUDE HOLD
 
 
-a_theta_1 = -0.25*rho*Va*c*S*CM_q*c/Jy;
-a_theta_2 = -0.5*rho*(Va^2)*c*S*CM_alpha/Jy;
-a_theta_3 = 0.5*rho*(Va^2)*c*S*CM_deltaE/Jy;
-
-deltaE_min = -deg2rad(60);
-deltaE_max = deg2rad(60);
-theta_error_max = deg2rad(10);
-
-Kp_theta = -deltaE_max/theta_error_max;
-
-KDC_theta = (Kp_theta*a_theta_3)/(a_theta_2+Kp_theta*a_theta_3);
-
-omega_n_theta = sqrt(a_theta_2 + Kp_theta); %Bandwidth
-zeta_theta = 0.9; %Damping. Tunable
-
-Kd_theta = (2*zeta_theta*omega_n_theta - a_theta_1)/a_theta_3;
-Ki_theta = 0;
-
-% ALTITUDE HOLD  USING PITCH
-W_h = 5; %Bandwidth multiplier. Tunable.
-zeta_h = 20; %Damping. Tunable
-omega_n_h = (1/W_h)*omega_n_theta;
-
-Ki_h = 0.3*(omega_n_h^2)/(KDC_theta*Va);
-Kp_h = (2*zeta_h*omega_n_h)/(KDC_theta*Va);
 
 
 height_target = 0;
@@ -97,37 +85,49 @@ height_target = 0;
 height_error = height_target - eta(2);
 height_error_integrated = height_error_integrated + h*height_error;
 
-
-% AIR SPEED HOLD USING PITCH
-
-zeta_v2 = 1; %Damping factor. tunable
-W_v2 = 10; %Bandwidth factor. Higher -> lower bandwidth. Tunable.
-
-omega_n_v2 = (1/W_v2)*omega_n_theta;
-
-Kiv2 = -omega_n_v2/g;
-Kpv2 = (a_v1 - 2*zeta_v2*omega_n_v2)/g;
-
 Va_target = Va_trim+5;
 Va_error = Va_target - Va;
 Va_error_integrated = Va_error_integrated + h*Va_error;
 % TARGET AND DELTA CALCULATION
 
-theta_target_max = deg2rad(30);
-theta_target_min = deg2rad(-30);
+theta_target_max = deg2rad(50);
+theta_target_min = deg2rad(-50);
 
-%theta_target = 5*Kpv2*Va_error + Kiv2 * Va_error_integrated;
-theta_target = Kp_h * height_error + Ki_h*height_error_integrated;
+nu_body = nu(1:2);
+nu_inertial = R_body_to_inertial * nu_body;
+
+Kp_h = 20;
+Kd_h = -1;
+
+theta_target = Kp_h * height_error + Kd_h*nu_inertial(2);
 if theta_target > theta_target_max
     theta_target = theta_target_max;
+
 elseif theta_target < theta_target_min
     theta_target = theta_target_min;
+
 end
-theta_error = theta_target - eta(3);
-theta_error_integrated = theta_error_integrated + h*theta_error;
 
 
-deltaE = Kp_theta*theta_error + Ki_theta*theta_error_integrated - Kd_theta*nu(3);
+[Xu, Xw, Xq, XdeltaE, XdeltaT, Zu, Zw, Zq, ZdeltaE, Mu, Mw, Mq, MdeltaE] = LinearParamCalculation(ConstStruct);
+
+%Linear dynamic inversion using linearized model
+
+q_dot_des = 0;
+q_des = 0;%theta_target;
+u = nu(1);
+w = nu(2);
+q = nu(3);
+q_dot_dash_des = q_dot_des - q_trim;
+u_dash = u - u_trim;
+w_dash = w - w_trim;
+q_dash = q - q_trim;
+
+K = 1000;
+
+deltaE_dash = (1/MdeltaE)*(q_dot_dash_des - Mu*u_dash - Mw*w_dash - Mq*q_dash + K*(q_des-q));
+
+deltaE = deltaE_dash + deltaE_trim;
 deltaT = deltaT_trim + Kpv1*Va_error + Kiv1*Va_error_integrated;
 
 if deltaT < 0
@@ -140,7 +140,7 @@ called = called +1;
 %     deltaE = deltaE_min;
 % elseif deltaE > deltaE_max
 %     deltaE = deltaE_max;
-% 
+%
 % end
 end
 

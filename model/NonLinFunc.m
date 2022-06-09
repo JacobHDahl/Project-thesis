@@ -1,4 +1,4 @@
-function nu_dot = NonLinFunc(eta,nu, ConstStruct)
+function nu_dot = NonLinFunc(eta,nu, u,  ConstStruct)
 h = 0.0001; %timestep
 iterations = 100000;
 
@@ -41,22 +41,30 @@ Va_trim = ConstStruct.Va_trim;
 gamma_trim = ConstStruct.gamma_trim;
 alpha_trim = ConstStruct.alpha_trim;
 
-
-% CONTROL
-[deltaT, deltaE] = PIDControl(eta,nu,ConstStruct);
-
 Va = sqrt(nu(1)*nu(1)+ nu(2)*nu(2));
 theta = eta(3);
 q = nu(3);
 alpha = atan2(nu(2),nu(1));%angle of attack
+disp("alpha")
+disp(alpha)
 
+% CONTROL
+persistent called
 
+if isempty(called)
+    called = 1;
+end
+% q_dot_des = 0;
+% [deltaT, deltaE] = PIDControl(eta,nu,ConstStruct);
+% deltaE = (2*q_dot_des*Jy/(CM_deltaE*rho*Va*Va*S*c)) -(CM0 + CM_alpha*alpha + 0.5*CM_q*c*q/(Va))/CM_deltaE;
+% %Dynamic inversion ^
 
+deltaT = u(1);
+deltaE = u(2);
 
-R_body_to_inertial = [cos(theta), sin(theta);
-    -sin(theta), cos(theta)]; %Rotation matrix from body to inertial
+R_inertial_to_body = [cos(theta), -sin(theta);
+                    sin(theta), cos(theta)]; %Rotation matrix from body to inertial
 
-R_inertial_to_body = R_body_to_inertial';
 
 
 R_stab_to_body = [cos(alpha),-sin(alpha);

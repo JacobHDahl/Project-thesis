@@ -8,6 +8,7 @@ classdef animation < handle
     	Faces
     	facecolors
         plot_initialized
+        fig_num
         %axis
         ylim_min
         ylim_max
@@ -26,7 +27,7 @@ classdef animation < handle
     methods
 
         %constructor
-        function self = animation
+        function self = animation(fig_num)
             self.l = 3; %Length of UAV
             self.h = 1.5; %height of uav
             self.s = 1; %nose extrusion
@@ -42,11 +43,12 @@ classdef animation < handle
             self.xlim_min = -10;
             self.body_handle = [];
             [self.Vertices, self.Faces, self.facecolors] = self.define_spacecraft();
-            self.plot_initialized = 0;           
+            self.plot_initialized = 0;       
+            self.fig_num = fig_num;
         end
         function self=update(self, state)
             if self.plot_initialized==0
-                figure(1); clf;
+                figure(self.fig_num); clf;
                 pe = state(1); pd = state(2); theta = state(3);
                 self=self.drawBody(pe, pd, theta);
                 title('UAV')

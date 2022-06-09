@@ -3,43 +3,40 @@ function x_dot = f(x,u)
 %alpha and gamma. 
 %Params
 %%
-m = 25;          % mass (kg)
-Jy = 2.135;         % pitch moment of inertia (kg m^3)
-xg = 0;              % CG x-ccordinate (m)
+ConstStruct = load("ConstFile.mat");
 
+h = 0.0001; %timestep
+iterations = 1000000;
+
+% ship parameters 
+m = ConstStruct.m;
+Jy = ConstStruct.Jy;
+xg = ConstStruct.xg;
 % Aero parameters
-rho = 1.2682; %air density
-alpha_0 = 0.4712; %rad
-M = 50; %blending factor in aero coefficient calculation taken from beard&McLain appendix E
-
-CL0 = 0.28; % Coefficient of lift at 0 pitch taken from beard&McLain appendix E
-CL_alpha = 3.45; %Derivative of CL wrt. alpha taken from beard&McLain appendix E
-CL_q = 0; %Derivative of CL wrt. q taken from beard&McLain appendix E
-CL_deltaE = -0.36; %Derivative of CL wrt. deltaE taken from beard&McLain appendix E
-
-CD0 = 0.03; % Coefficient of drag
-CD_alpha = 0.3; %Derivative of CD wrt. alpha taken from beard&McLain appendix E
-CD_q = 0; %Derivative of CD wrt. q taken from beard&McLain appendix E
-CD_deltaE = 0; %Derivative of CD wrt. deltaE taken from beard&McLain appendix E
-CD_p = 0.0437;
-
-CM0 = -0.02338; % Aero moment coefficient
-CM_alpha = -0.38; %Derivative of CM wrt. alpha taken from beard&McLain appendix E
-CM_q = -3.6; %Derivative of CM wrt. q taken from beard&McLain appendix E
-CM_deltaE = -0.5; %Derivative of CM wrt. deltaE taken from beard&McLain appendix E
-
-S = 0.55;  %Wing area taken from beard&McLain appendix E
-c = 0.18994;  %moment arm for wing taken from beard&McLain appendix E
-b = 2.8956;%wingspan taken from beard&McLain appendix E
-e = 0.9;
-
-S_prop = 0.2027;%taken from beard&McLain appendix E
-C_prop = 1; %just tuning here?
-
-%delta_t = 0.5; %thrust variable
-k_motor = 80; %taken from beard&McLain appendix E
-
-%%
+rho = ConstStruct.rho;
+alpha_0 = ConstStruct.alpha_0;
+M = ConstStruct.M;
+CL0 = ConstStruct.CL0;
+CL_alpha = ConstStruct.CL_alpha;
+CL_q = ConstStruct.CL_q;
+CL_deltaE = ConstStruct.CL_deltaE;
+CD0 = ConstStruct.CD0;
+CD_alpha = ConstStruct.CD_alpha;
+CD_q = ConstStruct.CD_q;
+CD_deltaE = ConstStruct.CD_deltaE;
+CD_p = ConstStruct.CD_p;
+CM0 = ConstStruct.CM0;
+CM_alpha = ConstStruct.CM_alpha;
+CM_q = ConstStruct.CM_q;
+CM_deltaE = ConstStruct.CM_deltaE;
+S = ConstStruct.S;
+c = ConstStruct.c;
+b = ConstStruct.b;
+e = ConstStruct.e;
+g = 9.81;
+S_prop = ConstStruct.S_prop;
+C_prop = ConstStruct.C_prop;
+k_motor = ConstStruct.k_motor;
 % paramsEnd
 
 
@@ -74,11 +71,8 @@ deltaT = sqrt((nominator/denominator) + (Va^2/k_motor^2));
 
 
 
-R_body_to_inertial = [cos(theta), sin(theta);
-    -sin(theta), cos(theta)]; %Rotation matrix from body to inertial
-
-R_inertial_to_body = R_body_to_inertial';
-
+R_inertial_to_body = [cos(theta), -sin(theta);
+                    sin(theta), cos(theta)]; %Rotation matrix from body to inertial
 
 R_stab_to_body = [cos(alpha),-sin(alpha);
     sin(alpha), cos(alpha)]; %rotation from stability to body

@@ -3,7 +3,7 @@
 % nu = [u, w, q]'; % velocity in x, velocity in z and pitchrate in bodyframe
 
 %%%%POSITIVE ROTATION IS ANTI-CLOCKWISE
-clear
+clear all;
 addpath("Control\");
 
 ConstStruct = load("ConstFile.mat");
@@ -53,12 +53,11 @@ q_trim = ConstStruct.q_trim;
 
 nus = zeros(3,iterations);
 etas = zeros(3,iterations);
-
 eta_init = [0, 0, theta_trim]'; % x, z, theta in inertial frame
-nu_init = [u_trim,w_trim, 0]'; % v(velocity_x), w(velocity_z), omega(rot_velocity) in body frame
+nu_init = [u_trim,w_trim, q_trim]'; % v(velocity_x), w(velocity_z), omega(rot_velocity) in body frame
 
 eta_lin_init = [0,0,theta_trim]';
-x_lin_init = [0,0, 0, theta_trim, 0]';
+x_lin_init = [u_trim,w_trim, q_trim, theta_trim, 0]';
 
 eta_lins = zeros(3,iterations);
 x_lins = zeros(5,iterations);
@@ -68,7 +67,8 @@ x_lins(:,1) = x_lin_init;
 nus(:,1) = nu_init;
 etas(:,1) = eta_init;
 
-anim = animation;
+anim = animation(1);
+%anim_lin = animation(2);
 t = zeros(1,iterations);
 
 
@@ -77,34 +77,55 @@ for i = 1:iterations-1
     nu = nus(:,i);
     eta = etas(:,i);
     theta = eta(3);
+    Va = sqrt(nu(1)*nu(1) + nu(2)*nu(2));
+    alpha = atan2(nu(2),nu(1));
+    u = nu(1);
+    w = nu(2);
+    q = nu(3);
 
     eta_lin = eta_lins(:,i);
     x_lin = x_lins(:,i);
-    theta = x_lin(4);
-    R_body_to_inertial = [cos(theta), sin(theta);
-                        -sin(theta), cos(theta)]; %Rotation matrix from body to inertial
+    R_body_to_inertial = [cos(theta), -sin(theta);
+                        sin(theta), cos(theta)]; %Rotation matrix from body to inertial
+    
+    %control
+    
+    [deltaT, deltaE] = PIDControl(eta,nu,ConstStruct);
+    
+    
+    %deltaE = (2*q_dot_des*Jy/(CM_deltaE*rho*Va*Va*S*c)) -(CM0 + CM_alpha*alpha + 0.5*CM_q*c*q/(Va))/CM_deltaE;
+    %Dynamic inversion ^
+    [Xu, Xw, Xq, XdeltaE, XdeltaT, Zu, Zw, Zq, ZdeltaE, Mu, Mw, Mq, MdeltaE] = LinearParamCalculation(ConstStruct);
+    
+    %Linear dynamic inversion using linearized model
+    u_dash = u - u_trim;
+    w_dash = w - w_trim;
+    q_dash = q - q_trim;
+    theta_dash = theta - theta_trim;
+    
 
+%     [deltaT, deltaE] = DynamicInv(eta, nu, ConstStruct);
+%     deltaT = deltaT_trim;
+%     deltaE = deltaE_trim;
+    u_action = [deltaT,deltaE]';
+    
 
     % Model here
-    x_trim = [u_trim, w_trim, q_trim, theta_trim, 0];
+    x_dash = [u_dash, w_dash, q_dash, theta_dash,0]';
+    u_lin = [deltaT-deltaT_trim,deltaE-deltaE_trim]';
 
-    u_lin = [deltaE_trim, deltaT_trim]';
-    u_lin = [deltaE_trim/5,deltaT_trim/5]';
-    x_lin_dot = LinearizedModel(x_lin,u_lin,ConstStruct);
-    
-    x_lin = x_lin + h*x_lin_dot;
-    
-    x_lin_mediate = x_lin(1:2);
+    x_dash_dot = LinearizedModel(x_dash,u_action,ConstStruct);
+    x_lin_dot = x_dash_dot;
+    nu_lin_dot = [x_lin_dot(1), x_lin_dot(2), x_lin_dot(3)]';
 
-    eta_lin_dot = R_body_to_inertial * x_lin_mediate;
-    eta_lin_dot(2) = x_lin(5);
-    eta_lin_dot(end+1) = x_lin(4);
-    eta_lin = eta_lin + h*eta_lin_dot;
-    x_lins(:,i+1) = x_lin;
-    eta_lins(:,i+1) = eta_lin;
+    nu_lin = nu + h*nu_lin_dot;
+    nu_lin_mediate = nu_lin(1:2);
+    eta_lin_dot = R_body_to_inertial*nu_lin_mediate;
+    eta_lin_dot(end+1) = nu_lin(3);
+    eta_lin = eta + h*eta_lin_dot;
 
 
-    nu_dot = NonLinFunc(eta,nu,ConstStruct);
+    nu_dot = NonLinFunc(eta,nu,u_action,ConstStruct);
     
     nu_mediate = nu(1:2);
     eta_dot = R_body_to_inertial * nu_mediate;
@@ -115,13 +136,14 @@ for i = 1:iterations-1
 
     
     if mod(i,100)==0
-        anim=anim.update(eta_lin);
+        anim=anim.update(eta);
+        %anim_lin = anim_lin.update(eta_lin);
     end
     
     nus(:,i+1) = nu;
     etas(:,i+1) = eta;
 
-    pause(h*2); %This relates to the perceived time spent in the simulation. Relate to time t. TODO
+    pause(h); %This relates to the perceived time spent in the simulation. Relate to time t. TODO
 
 end
 
