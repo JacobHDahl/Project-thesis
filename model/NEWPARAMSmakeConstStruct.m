@@ -1,4 +1,4 @@
-clear;clc
+clear all;clc
 h = 0.0001; %timestep
 iterations = 1000000;
 
@@ -13,14 +13,14 @@ alpha_0 = 0.4712; %rad
 M = 50; %blending factor in aero coefficient calculation taken from beard&McLain appendix E
 
 CL0 = 0.23; % Coefficient of lift at 0 pitch taken from beard&McLain appendix E
-CL_alpha = 5.61; %Derivative of CL wrt. alpha taken from beard&McLain appendix E
-CL_q = 7.95; %Derivative of CL wrt. q taken from beard&McLain appendix E
-CL_deltaE = 0.13; %Derivative of CL wrt. deltaE taken from beard&McLain appendix E
+CL_alpha = -0.98;%5.61; %Derivative of CL wrt. alpha taken from beard&McLain appendix E
+CL_q = 0;%7.95; %Derivative of CL wrt. q taken from beard&McLain appendix E
+CL_deltaE = -0.36;%0.13; %Derivative of CL wrt. deltaE taken from beard&McLain appendix E
 
 CD0 = 0.043; % Coefficient of drag
 CD_alpha = 0.03; %Derivative of CD wrt. alpha taken from beard&McLain appendix E
 CD_q = 0; %Derivative of CD wrt. q taken from beard&McLain appendix E
-CD_deltaE = 0.0135; %Derivative of CD wrt. deltaE taken from beard&McLain appendix E
+CD_deltaE = 0;%0.0135; %Derivative of CD wrt. deltaE taken from beard&McLain appendix E
 CD_p = 0;
 
 CM0 = 0.0135; % Aero moment coefficient
@@ -38,14 +38,14 @@ S_prop = 0.2027;%taken from beard&McLain appendix E
 C_prop = 1; %just tuning here?
 k_motor = 80; %taken from beard&McLain appendix E
 
-deltaE_trim = -0.0836;
-deltaT_trim = 0.4990;
-u_trim = 38.1551; %using Va = 40 and gamma = 0 in trim
-w_trim = 1.8510;
-theta_trim = 0.0485;
-Va_trim = 38.2;
+deltaE_trim = -0.1647;
+deltaT_trim = 0.4509;
+u_trim = 32.9315; 
+w_trim = 2.1250;
+theta_trim = 0.0644;
+Va_trim = 33;
 gamma_trim = 0;
-alpha_trim = 0.0485;
+alpha_trim = 0.0644;
 q_trim = 0;
 
 

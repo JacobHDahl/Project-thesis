@@ -1,6 +1,6 @@
 function x_dot = f(x,u)
 %This function is the nonlinear model of the airplane, but defined by Va,
-%alpha and gamma. 
+%alpha and gamma.
 %Params
 %%
 ConstStruct = load("ConstFile.mat");
@@ -8,7 +8,7 @@ ConstStruct = load("ConstFile.mat");
 h = 0.0001; %timestep
 iterations = 1000000;
 
-% ship parameters 
+% ship parameters
 m = ConstStruct.m;
 Jy = ConstStruct.Jy;
 xg = ConstStruct.xg;
@@ -48,6 +48,7 @@ Va = u(1);
 gamma_des = u(2);
 theta = alpha + gamma_des;
 
+
 u = Va * cos(alpha);
 w = Va * sin(alpha);
 q = 0;
@@ -64,27 +65,24 @@ CX_q_ofAlpha = -CD_q*cos(alpha) + CL_q*sin(alpha);
 CX_deltaE_ofAlpha = -CD_deltaE*cos(alpha) + CL_deltaE*sin(alpha);
 
 
-nominator = 2*m*(q*w + 9.81*sin(theta))- rho*(Va^2)*S*(CX_ofAlpha + 0.5*CX_q_ofAlpha*c*q/Va + CX_deltaE_ofAlpha *deltaE);
+nominator = 2*m*(q*w + 9.81*sin(-theta))- rho*(Va^2)*S*(CX_ofAlpha + 0.5*CX_q_ofAlpha*c*q/Va + CX_deltaE_ofAlpha *deltaE);
 denominator = rho*S_prop*C_prop*k_motor^2;
 
 deltaT = sqrt((nominator/denominator) + (Va^2/k_motor^2));
-
-
-
-R_inertial_to_body = [cos(theta), -sin(theta);
-                    sin(theta), cos(theta)]; %Rotation matrix from body to inertial
 
 R_stab_to_body = [cos(alpha),-sin(alpha);
     sin(alpha), cos(alpha)]; %rotation from stability to body
 
 %Compute gravity
-FG = R_inertial_to_body*[0; m*9.81];
 
-Fx_G = FG(1);
-Fz_G = FG(2);
+Fx_G = m*g*sin(-theta);
+Fz_G = m*g*cos(-theta);
 
 %Compute propeller thrust
 Fx_thrust=0.5*rho*S_prop*C_prop*((k_motor*deltaT)*(k_motor*deltaT)-Va*Va);
+if Fx_thrust < 0
+    Fx_thrust = 0;
+end
 fancyAero = 1;
 if fancyAero
 
@@ -97,8 +95,17 @@ if fancyAero
     F_lift = 0.5*rho*Va*Va*S*CL;
     F_drag = 0.5*rho*Va*Va*S*CD;
 
-    CM = CM0 + CM_alpha * alpha + CM_q*0.5*c*q/Va + CM_deltaE*deltaE;
-    M_aero = 0.5*rho*Va*Va*S*c*CM/Jy;
+    CM = CM0 + CM_alpha * alpha + CM_deltaE*deltaE + CM_q*0.5*c*q/Va;
+    M_aero = 0.5*rho*Va*Va*S*c*CM;
+    %M_aero = 30*sin(called/10);%0*0.5*rho*Va*Va*S*c*CM;
+
+    %     if mod(called,100)==0
+    %         disp("q")
+    %         disp(q)
+    %         disp("alph")
+    %         disp(alpha)
+    %     end
+
 else
     %Linear model
     %Compute areodynamic forces in stability frame
@@ -108,7 +115,7 @@ else
 
     F_lift = 0.5 * rho * Va*Va * S * CL;
     F_drag = 0.5 * rho * Va*Va * S * CD;
-    M_aero = (0.5 * rho * Va*Va * S * c * CM)/Jy;
+    M_aero = (0.5 * rho * Va*Va * S * c * CM);
 end
 
 F_aero = R_stab_to_body * [-F_drag;-F_lift]; %Transform to body frame
@@ -119,16 +126,13 @@ Fz_aero = F_aero(2);
 fx = Fx_G - Fx_aero + Fx_thrust;
 fz = -Fz_G - Fz_aero;
 
+
 CRB = nu(3)*[0, -1, 0;
     1, 0, 0;
     0, 0, 0];
 
+F = [fx/m; fz/m; M_aero/Jy];
 
-F = [fx/m; fz/m; M_aero];
-
-
-nu_dot = CRB * nu + F;
-
-x_dot = nu_dot;
+x_dot = CRB * nu + F;
 end
 

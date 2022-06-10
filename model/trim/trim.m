@@ -1,4 +1,4 @@
-function [res, deltaT,deltaE,u_init,w_init,theta_init] =  trim(Va,gamma)
+function [res, deltaT,deltaE,u_init,w_init,theta_init] =  trim(Va,gamma, ConstStruct)
 %Trim takes in a desired airspeed(Va) and climb angle(gamma) and computes
 %the trim conditions of the airplane using the angle of attack(alpha)
 
@@ -9,11 +9,11 @@ function [res, deltaT,deltaE,u_init,w_init,theta_init] =  trim(Va,gamma)
 func = @(x)(([0,0,0]-f(x,[Va,gamma])')*([0,0,0]-f(x,[Va,gamma])')');
 
 %Initial guess
-x0 = deg2rad(5);
+x0 = deg2rad(0);
 
 [alpha,res] = fminsearch(func,x0);
 
-[deltaT, deltaE, u_init, w_init,theta_init] = computeU(alpha,Va,gamma);
+[deltaT, deltaE, u_init, w_init,theta_init] = computeU(alpha,Va,gamma, ConstStruct);
 
 
 end

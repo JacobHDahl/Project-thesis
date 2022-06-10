@@ -45,8 +45,8 @@ Va = sqrt(nu(1)*nu(1)+ nu(2)*nu(2));
 theta = eta(3);
 q = nu(3);
 alpha = atan2(nu(2),nu(1));%angle of attack
-disp("alpha")
-disp(alpha)
+
+
 
 % CONTROL
 persistent called
@@ -62,22 +62,19 @@ end
 deltaT = u(1);
 deltaE = u(2);
 
-R_inertial_to_body = [cos(theta), -sin(theta);
-                    sin(theta), cos(theta)]; %Rotation matrix from body to inertial
-
-
-
 R_stab_to_body = [cos(alpha),-sin(alpha);
-    sin(alpha), cos(alpha)]; %rotation from stability to body
+                sin(alpha), cos(alpha)]; %rotation from stability to body
 
 %Compute gravity
-FG = R_inertial_to_body*[0; m*9.81];
 
-Fx_G = FG(1);
-Fz_G = FG(2);
+Fx_G = m*g*sin(-theta);
+Fz_G = m*g*cos(-theta);
 
 %Compute propeller thrust
 Fx_thrust=0.5*rho*S_prop*C_prop*((k_motor*deltaT)*(k_motor*deltaT)-Va*Va);
+if Fx_thrust < 0
+    Fx_thrust = 0;
+end
 fancyAero = 1;
 if fancyAero
 
@@ -90,8 +87,18 @@ if fancyAero
     F_lift = 0.5*rho*Va*Va*S*CL;
     F_drag = 0.5*rho*Va*Va*S*CD;
 
-    CM = CM0 + CM_alpha * alpha + CM_q*0.5*c*q/Va + CM_deltaE*deltaE;
-    M_aero = 0.5*rho*Va*Va*S*c*CM;
+    CM = CM0 + CM_alpha * alpha + CM_deltaE*deltaE + CM_q*0.5*c*q/Va;
+    M_aero = 0.25*0.5*rho*Va*Va*S*c*CM;
+
+    %M_aero = 30*sin(called/10);%0*0.5*rho*Va*Va*S*c*CM;
+
+%     if mod(called,100)==0
+%         disp("q")
+%         disp(q)
+%         disp("alph")
+%         disp(alpha)
+%     end
+    
 else
     %Linear model
     %Compute areodynamic forces in stability frame
@@ -117,10 +124,10 @@ CRB = nu(3)*[0, -1, 0;
     1, 0, 0;
     0, 0, 0];
 
-
 F = [fx/m; fz/m; M_aero/Jy];
 
-
+called = called + 1;
 nu_dot = CRB * nu + F;
+
 end
 

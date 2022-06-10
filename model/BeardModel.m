@@ -5,11 +5,12 @@
 %%%%POSITIVE ROTATION IS ANTI-CLOCKWISE
 clear all;
 addpath("Control\");
+addpath(genpath("hebi/"))
 
 ConstStruct = load("ConstFile.mat");
 
-h = 0.0001; %timestep
-iterations = 1000000;
+h = ConstStruct.h;
+iterations = ConstStruct.iterations;
 
 % ship parameters 
 m = ConstStruct.m;
@@ -51,18 +52,19 @@ gamma_trim = ConstStruct.gamma_trim;
 alpha_trim = ConstStruct.alpha_trim;
 q_trim = ConstStruct.q_trim;
 
+
 nus = zeros(3,iterations);
 etas = zeros(3,iterations);
 eta_init = [0, 0, theta_trim]'; % x, z, theta in inertial frame
 nu_init = [u_trim,w_trim, q_trim]'; % v(velocity_x), w(velocity_z), omega(rot_velocity) in body frame
 
-eta_lin_init = [0,0,theta_trim]';
-x_lin_init = [u_trim,w_trim, q_trim, theta_trim, 0]';
-
-eta_lins = zeros(3,iterations);
-x_lins = zeros(5,iterations);
-eta_lins(:,1) = eta_lin_init;
-x_lins(:,1) = x_lin_init;
+% eta_lin_init = [0,0,theta_trim]';
+% x_lin_init = [u_trim,w_trim, q_trim, theta_trim, 0]';
+% 
+% eta_lins = zeros(3,iterations);
+% x_lins = zeros(5,iterations);
+% eta_lins(:,1) = eta_lin_init;
+% x_lins(:,1) = x_lin_init;
 
 nus(:,1) = nu_init;
 etas(:,1) = eta_init;
@@ -71,6 +73,9 @@ anim = animation(1);
 %anim_lin = animation(2);
 t = zeros(1,iterations);
 
+kb = HebiKeyboard();
+deltaE = deltaE_trim;
+deltaT = deltaT_trim;
 
 for i = 1:iterations-1
     t(i) = (i-1)*h;
@@ -79,23 +84,28 @@ for i = 1:iterations-1
     theta = eta(3);
     Va = sqrt(nu(1)*nu(1) + nu(2)*nu(2));
     alpha = atan2(nu(2),nu(1));
+
+    
     u = nu(1);
     w = nu(2);
     q = nu(3);
 
-    eta_lin = eta_lins(:,i);
-    x_lin = x_lins(:,i);
+%     eta_lin = eta_lins(:,i);
+%     x_lin = x_lins(:,i);
     R_body_to_inertial = [cos(theta), -sin(theta);
                         sin(theta), cos(theta)]; %Rotation matrix from body to inertial
     
     %control
-    
-    [deltaT, deltaE] = PIDControl(eta,nu,ConstStruct);
-    
-    
-    %deltaE = (2*q_dot_des*Jy/(CM_deltaE*rho*Va*Va*S*c)) -(CM0 + CM_alpha*alpha + 0.5*CM_q*c*q/(Va))/CM_deltaE;
+    Va_target = Va_trim;
+    height_target = 0;
+%     [deltaT, deltaE] = PIDControl(eta,nu,ConstStruct,Va_target, height_target);
+%     %[deltaT, deltaE] = ezPID(eta,nu,ConstStruct,Va_target,height_target);
+%     [deltaT, deltaE] = newPID(eta,nu,ConstStruct,Va_target,height_target);
+
+
+%     deltaE = (2*q_dot_des*Jy/(CM_deltaE*rho*Va*Va*S*c)) -(CM0 + CM_alpha*alpha + 0.5*CM_q*c*q/(Va))/CM_deltaE;
     %Dynamic inversion ^
-    [Xu, Xw, Xq, XdeltaE, XdeltaT, Zu, Zw, Zq, ZdeltaE, Mu, Mw, Mq, MdeltaE] = LinearParamCalculation(ConstStruct);
+    %[Xu, Xw, Xq, XdeltaE, XdeltaT, Zu, Zw, Zq, ZdeltaE, Mu, Mw, Mq, MdeltaE] = LinearParamCalculation(ConstStruct);
     
     %Linear dynamic inversion using linearized model
     u_dash = u - u_trim;
@@ -104,34 +114,48 @@ for i = 1:iterations-1
     theta_dash = theta - theta_trim;
     
 
-%     [deltaT, deltaE] = DynamicInv(eta, nu, ConstStruct);
-%     deltaT = deltaT_trim;
-%     deltaE = deltaE_trim;
+    %[deltaT, deltaE] = DynamicInv(eta, nu, ConstStruct);
+%     deltaT = 0;
+%     deltaE = 0;
+
+
+    state = read(kb);
+    if all(state.keys('w'))
+        deltaE = deltaE - 0.001;
+    elseif all(state.keys('s'))
+        deltaE = deltaE+0.001;
+
+    elseif all(state.keys('d'))
+        deltaT = deltaT + 0.00001;
+    elseif all(state.keys('a'))
+        deltaT = deltaT - 0.00001;
+    end
+    
     u_action = [deltaT,deltaE]';
     
 
     % Model here
-    x_dash = [u_dash, w_dash, q_dash, theta_dash,0]';
-    u_lin = [deltaT-deltaT_trim,deltaE-deltaE_trim]';
-
-    x_dash_dot = LinearizedModel(x_dash,u_action,ConstStruct);
-    x_lin_dot = x_dash_dot;
-    nu_lin_dot = [x_lin_dot(1), x_lin_dot(2), x_lin_dot(3)]';
-
-    nu_lin = nu + h*nu_lin_dot;
-    nu_lin_mediate = nu_lin(1:2);
-    eta_lin_dot = R_body_to_inertial*nu_lin_mediate;
-    eta_lin_dot(end+1) = nu_lin(3);
-    eta_lin = eta + h*eta_lin_dot;
+%     x_dash = [u_dash, w_dash, q_dash, theta_dash,0]';
+%     u_lin = [deltaT-deltaT_trim,deltaE-deltaE_trim]';
+% 
+%     x_dash_dot = LinearizedModel(x_dash,u_action,ConstStruct);
+%     x_lin_dot = x_dash_dot;
+%     nu_lin_dot = [x_lin_dot(1), x_lin_dot(2), x_lin_dot(3)]';
+% 
+%     nu_lin = nu + h*nu_lin_dot;
+%     nu_lin_mediate = nu_lin(1:2);
+%     eta_lin_dot = R_body_to_inertial*nu_lin_mediate;
+%     eta_lin_dot(end+1) = nu_lin(3);
+%     eta_lin = eta + h*eta_lin_dot;
 
 
     nu_dot = NonLinFunc(eta,nu,u_action,ConstStruct);
-    
+    nu = nu + h * nu_dot;
+
     nu_mediate = nu(1:2);
     eta_dot = R_body_to_inertial * nu_mediate;
     eta_dot(end+1) = nu(3);
 
-    nu = nu + h * nu_dot;
     eta = eta + h * eta_dot;
 
     
