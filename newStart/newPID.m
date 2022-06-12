@@ -75,7 +75,7 @@ K_theta_DC = Kp_theta*a_theta_3/(a_theta_2 + Kp_theta*a_theta_3);
 
 %ALTITUDE HOLD using commanded pitch
 
-Wh = 10; %bandwidth scaler tunable
+Wh = 15; %bandwidth scaler tunable
 
 omega_n_h = omega_n_theta/Wh;
 zeta_h = 1; %damping tunable
