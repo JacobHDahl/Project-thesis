@@ -46,14 +46,31 @@ q_trim = ConstStruct.q_trim;
 
 persistent height_error_integrated;
 persistent called;
+persistent Va_error_integrated;
 
 if isempty(height_error_integrated)
     height_error_integrated = 0;
+    Va_error_integrated = 0;
     called = 1;
 end
 
 Va = sqrt(nu(1)^2 + nu(2)^2);
 alpha = atan2(nu(2),nu(1));
+
+zeta_v1 = 1; %Damping. tunable
+omega_n_v1 = 100; %Bandwidth. tunable.
+
+
+a_v1 = (1/m)*rho*Va_trim*S*(CD0 + CD_alpha*alpha_trim + CD_deltaE*deltaE_trim)...
+    + (1/m)*rho*S_prop*C_prop*Va_trim;
+a_v2 = (1/m)*rho*S_prop*C_prop*k_motor^2 * deltaT_trim;
+
+Kpv1 = (2*zeta_v1*omega_n_v1 - a_v1) / a_v2;
+Kiv1 = omega_n_v1^2 / a_v2;
+
+
+Va_error = Va_target - Va;
+Va_error_integrated = Va_error_integrated + h*Va_error;
 
 
 a_theta_1 = -rho*Va*Va*c*S*CM_alpha*c/(2*Jy*2*Va);
@@ -63,7 +80,7 @@ a_theta_3 = rho*Va*Va*c*S*CM_deltaE/(2*Jy);
 deltaE_max = deg2rad(40);
 e_theta_max = deg2rad(10);
 
-Kp_theta = -deltaE_max/e_theta_max;
+Kp_theta = -0.35*deltaE_max/e_theta_max;
 
 omega_n_theta = sqrt(a_theta_2 + abs(a_theta_3)*deltaE_max/e_theta_max); %bandwidth
 zeta_theta = 0.1; %tunable damping
@@ -91,7 +108,7 @@ if height_error < 1
     height_error_integrated = 0;
 end
 
-theta_target = Kp_h*height_error + Ki_h*height_error_integrated;
+theta_target = generateThetaTarget(ConstStruct,nu,eta,height_target);%Kp_h*height_error + Ki_h*height_error_integrated;
 
 theta_target_max = deg2rad(50);
 if theta_target > theta_target_max
@@ -116,13 +133,6 @@ if deltaE > deltaE_max
 
 elseif deltaE < -deltaE_max
     deltaE = -deltaE_max;
-
-end
-if mod(called,500)==0
-    disp("theta_target")
-    disp(rad2deg(theta_target))
-    disp("theta_error")
-    disp(rad2deg(theta_error))
 
 end
 called = called + 1;

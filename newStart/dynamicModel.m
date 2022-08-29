@@ -1,4 +1,4 @@
-function nu_dot = dynamicModel(nu,eta,u_action,ConstStruct)
+function nu_dot = dynamicModel(nu,eta,u_action,ConstStruct, modelNoise)
 m = ConstStruct.m;
 Jy = ConstStruct.Jy;
 g = 9.81;
@@ -38,7 +38,7 @@ fz = FG_Z + FAERO_Z;
 
 u_dot = -q*w  + (1/m)*fx;
 w_dot = q*u + (1/m)*fz;
-q_dot = M_aero/Jy;
+q_dot = M_aero/Jy + modelNoise;
 
 
 nu_dot = [u_dot, w_dot, q_dot]';
