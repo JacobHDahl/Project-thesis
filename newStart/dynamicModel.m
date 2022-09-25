@@ -1,4 +1,4 @@
-function nu_dot = dynamicModel(nu,eta,u_action,ConstStruct, modelNoise)
+function nu_dot = dynamicModel(nu,eta,u_action,ConstStruct, LUT, modelNoise)
 m = ConstStruct.m;
 Jy = ConstStruct.Jy;
 g = 9.81;
@@ -27,7 +27,7 @@ FG_Z = m*g*cos(theta);
 
 
 linear = 0; %toggle to select linear or non-linear aero-model
-[FAERO_X,FAERO_Z, M_aero] = calculateAeroForces(nu,ConstStruct,deltaE,linear);
+[FAERO_X,FAERO_Z, M_aero] = calculateAeroForces(nu,ConstStruct,deltaE,linear, LUT);
 
 
 

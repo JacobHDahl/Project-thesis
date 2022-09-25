@@ -1,4 +1,4 @@
-function [FAERO_X, FAERO_Z, M_aero] = calculateAeroForces(nu,ConstStruct,deltaE,linear)
+function [FAERO_X, FAERO_Z, M_aero] = calculateAeroForces(nu,ConstStruct,deltaE,linear,LUT)
 c = ConstStruct.c;
 rho = ConstStruct.rho;
 S = ConstStruct.S;
@@ -37,10 +37,32 @@ if linear
 else
     
     [CL_ofAlpha, CD_ofAlpha] = calculateLiftDragCoeffs(alpha,ConstStruct);
+    
+    oldCL = CL_ofAlpha;
+    oldCD = CD_ofAlpha;
+    oldCM = CM0 + CM_alpha*alpha;
+
+    tmp = LUT(:,:);
+    alphas = tmp.(1);
+    CLs = tmp.(2);
+    CDs = tmp.(3);
+    CMs = tmp.(5);
+    [closestAlpha, idx] = min(abs(rad2deg(alpha)-alphas));
+
+
+    CL_ofAlpha = CLs(idx);
+    CD_ofAlpha = CDs(idx);
+    CM_ofAlpha = CMs(idx);
+
+    %disp(['CLDiff: ' num2str(CL_ofAlpha - oldCM) ' CDDiff: ' num2str(CD_ofAlpha - oldCD) ' CMDiff: ' num2str(CM_ofAlpha - oldCM)])
+
 
     CL = CL_ofAlpha + CL_q*0.5*c*q/Va + CL_deltaE*deltaE;
     CD = CD_ofAlpha + CD_q*0.5*c*q/Va + CL_deltaE*deltaE;
-    CM = CM0 + CM_alpha*alpha + CM_q*0.5*c*q/Va + CM_deltaE*deltaE;
+    CM = CM_ofAlpha + CM_q*0.5*c*q/Va + CM_deltaE*deltaE;
+    %CM = CM0 + CM_alpha*alpha + CM_q*0.5*c*q/Va + CM_deltaE*deltaE;
+    
+
 
     F_lift = 0.5*rho*Va*Va*S*CL;
     F_drag = 0.5*rho*Va*Va*S*CD;

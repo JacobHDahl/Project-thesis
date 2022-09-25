@@ -1,6 +1,6 @@
 clear all;clc
 h = 0.01; %timestep
-t_final = 50;
+t_final = 200;
 iterations = t_final/h;
 
 % ship parameters 

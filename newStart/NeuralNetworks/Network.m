@@ -61,6 +61,23 @@ classdef Network
                 disp(['epoch: ', num2str(i), '/', num2str(epochs), 'error: ', num2str(err)]);
             end
         end
+        function [o, result] = feedForward(o, input)
+            output = input;
+            for k = 1:length(o.layers)
+                layer = o.layers{k};
+                [layer, output] = layer.forward_propagation(output);
+                o.layers{k} = layer;
+            end
+            result = output;
+        end
+
+        function o = adapt(o,error, learning_rate)
+            for k = length(o.layers):-1:1
+                layer = o.layers{k};
+                [layer, error] = layer.backward_propagation(error, learning_rate);
+                o.layers{k} = layer;
+            end
+        end
     end
 end
 

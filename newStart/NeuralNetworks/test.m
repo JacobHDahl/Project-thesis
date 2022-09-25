@@ -1,5 +1,3 @@
-clear
-clc
 activation_prime = @(x) 1-tanh(x).*tanh(x);
 activation = @tanh;
 
@@ -25,6 +23,10 @@ x_train = [0,0; 0,1; 1,0; 1,1];
 y_train = [0;1;1;0];
 net = net.fit(x_train, y_train, 1000, 0.1);
 
+[net, result] = net.feedForward([0,0]');
+error = 0.001;
+net = net.adapt(error, 0.1);
+[net, result2] = net.feedForward([0,0]');
 [net, out] = net.predict(x_train);
 disp(out)
 
