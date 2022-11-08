@@ -6,10 +6,11 @@ addpath("LinearModel\")
 addpath("helping_functions\");
 ConstStruct = load("ConstFile.mat");
 LUT = readtable("airfoildata\xf-aquilasm-il-50000.csv");
+% Set seed
 rng(999);
 
 h = ConstStruct.h;
-iterations = ConstStruct.iterations*10;
+iterations = ConstStruct.iterations*4;
 % ship parameters
 m = ConstStruct.m;
 Jy = ConstStruct.Jy;
@@ -55,7 +56,6 @@ q_trim = ConstStruct.q_trim;
 nus = zeros(3,iterations);
 etas = zeros(3,iterations);
 eta_init = [0, 0, theta_trim]'; % x, z, theta in inertial frame
-nu_init = [u_trim*0.5,w_trim*10, 0]'; % v(velocity_x), w(velocity_z), omega(rot_velocity) in body frame
 nu_init = [u_trim,w_trim, 0]';
 nus(:,1) = nu_init;
 etas(:,1) = eta_init;
@@ -107,16 +107,12 @@ sigp = zeros(nmid,nmid);
 sigs = zeros(nmid,iterations);
 stallIdxs = [];
 
-winds = generate2DRandomWalk(iterations);
-
-winds(:,1) = (winds(:,1) - mean(winds(:,1)))./(iterations/1000);
-winds(:,2) = (winds(:,2) - mean(winds(:,2)))./(iterations/1000);
-%plot(wind(:,1),wind(:,2))
-
 height_targets = zeros(1,iterations);
 smoothingFac = 10; %lower is more smoothing
+disp("Generating random walk setpoints")
 [height_setpoints, unfilt] = generateRandomWalk(iterations, [-0.5 0.5], smoothingFac);
-%
+disp("Finished random walk generation")
+disp("Starting simulation")
 plot(height_setpoints);
 hold on
 plot(unfilt)
@@ -132,108 +128,42 @@ height_error_integrated = 0;
 externalInput = 0;
 theta_error_integrated = 0;
 
-
 activation_prime = @(x) 1-tanh(x).*tanh(x);
 activation = @tanh;
 
 mse = @(y_true, y_pred) mean((y_true - y_pred).^2);
 mse_prime = @(y_true, y_pred) 2*(y_pred-y_true)/length(y_true);
 
-net = Network();
-FC1 = FCLayer(5,10);
-net = net.add(FC1);
-AL1 = ActivationLayer(activation, activation_prime);
-net = net.add(AL1);
-% FC4 = FCLayer(30,100);
-% net = net.add(FC4);
-% AL4 = ActivationLayer(activation, activation_prime);
-% net.add(AL4);
-FC2 = FCLayer(10,10);
-net = net.add(FC2);
-AL2 = ActivationLayer(activation, activation_prime);
-net = net.add(AL2);
-FC2 = FCLayer(10,1);
-net = net.add(FC2);
-%AL3 = ActivationLayer(activation, activation_prime);
-%net = net.add(AL3);
 
-net = net.use(mse, mse_prime);
+%Create new, randomly initiated net
+% net = Network();
+% FC1 = FCLayer(5,10);
+% net = net.add(FC1);
+% AL1 = ActivationLayer(activation, activation_prime);
+% net = net.add(AL1);
+% FC2 = FCLayer(10,10);
+% net = net.add(FC2);
+% AL2 = ActivationLayer(activation, activation_prime);
+% net = net.add(AL2);
+% FC2 = FCLayer(10,1);
+% net = net.add(FC2);
+%net = net.use(mse, mse_prime);
 
+% Load previously trained neural net
 netStrkt = load("trained_net.mat");
 net = netStrkt.net;
 
 for i = 1:iterations
     t(i) = (i-1)*h;
     nu = nus(:,i);
-    wind = winds(i,:)';
-    nu(1:2) = nu(1:2) + wind;
+    nu(1:2) = nu(1:2);
     eta = etas(:,i);
     theta = eta(3);
     q = nu(3);
     alpha = atan2(nu(2),nu(1));
     
     Va = sqrt(nu(1)^2 + nu(2)^2);
-
-    if alpha > deg2rad(15) || alpha < deg2rad(-10)
-        stallIdxs(end+1) = i;
-    end
-   
-
-    % external input
-% 
-%     if mod(t(i),2*tswitch)<tswitch
-%         externalInput = 0.3;
-%     else
-%         externalInput = -0.3;
-%     end
-
-    %reference model
-
-%     if (t(i)>3) && (t(i)<6)
-%         externalInput = 0.1;
-%     elseif t(i)>6 && t(i)<7
-%         externalInput = -0.3;
-%     elseif t(i)>7 && t(i)<7.5
-%         externalInput = 0.3;
-%     elseif t(i)>7.5 && t(i)< 15
-%         externalInput = -0.5;
-%     elseif t(i)>15 && t(i)<45 
-%         externalInput = 0.5;
-%     elseif t(i)>45 && t(i)< 60
-%         externalInput = 0.3;
-% 
-%     elseif  t(i)>60 && t(i)<70
-%         externalInput = -0.6;
-%     elseif t(i) > 70 && t(i) < 90
-%         externalInput = 0;
-% 
-%     elseif t(i)>90
-%         externalInput = 0.3*sin(t(i));
-%     else
-%         externalInput = -0.3;
-%     end
-%     externalInput = externalInput - 0.02;
-
-%     if (t(i)>2) && (t(i)<5)
-%             externalInput = 0.3;
-%         elseif t(i)>5 && t(i)<7.55
-%             externalInput = -0.3;
-%     else
-%         externalInput = 0;
-% 
-%     end
-
-    height_target = 40;
-    timeComp = mod(t(i), round(iterations/5)*h);
-    if timeComp<20
-        height_target = 40;
-    elseif timeComp > 20 && timeComp < 60
-        height_target = 40;
-    elseif timeComp > 60 && timeComp <  140
-        height_target = height_target + 5*sin(timeComp*0.2);
-    elseif timeComp > 170
-        height_target = 0;
-    end
+  
     height_setpoint = height_setpoints(i);
     timeComp = mod(t(i), round(iterations/5)*h);
     if timeComp<=50
@@ -243,10 +173,6 @@ for i = 1:iterations
     else
         height_target = height_setpoint;
     end
-
-    %height_target = height_setpoint;
-    
-
 
     height_targets(i) = height_target;
 
@@ -295,45 +221,29 @@ for i = 1:iterations
     
     [net, vad] = net.feedForward(xbar);
     learning_rate = 0.01;
-%     if i < iterations
-%         net = net.adapt(error, learning_rate);
-%     end
-    %vad = -2.3118;
-    %[vad, sig, sigp]  = feedForward(xbar,W , V, sig, sigp, a, nmid);
+    if i < iterations
+        net = net.adapt(error, learning_rate);
+    end
+
     CM = CM0 + CM_alpha*alpha + CM_q*0.5*c*q/Va + CM_deltaE*deltaE;
     M_aero = 0.5*rho*Va*Va*S*c*CM;
     const = 0.5*rho*Va*Va*S*c/Jy;
     [Xu, Xw, Xq, XdeltaE, XdeltaT, Zu, Zw, Zq, ZdeltaE, Mu, Mw, Mq, MdeltaE] = LinearParamCalculation(ConstStruct);
     deltaE = (rdot(1) - K_diff*error - vad - Mq*q)/MdeltaE;
+
+    % Perfect dynamic inv:
     %deltaE = (rdot(1)-K_diff*error-vad)/(const*CM_deltaE) -(CM0 + CM_alpha*alpha + 0.5*CM_q*c*q/Va)/CM_deltaE;
     deltaE_max = deg2rad(40);
     if deltaE > deltaE_max
-
         deltaE = deltaE_max;
-
     elseif deltaE < -deltaE_max
         deltaE = -deltaE_max;
-
     end
 
     sigs(:,i) = sig;
     vads(i) = vad;
     
-   
-    %LP filter
-    %deltaE = (deltaE + oldu)/2;
     us(i) = deltaE;
-
-    % learning law
-    Wdot =0;% -gammaw*(error*( sig' - xbar'*V'*sigp) + lambda*norm(error)*W' );
-    Vdot =0;% -gammav*(sigp*W*error*xbar' + lambda*norm(error)*V);
-    % put NN update in a vector
-%     for j=1:nmid
-%         vdot((j-1)*nin+1:j*nin) = Vdot(j,:);
-%     end
-
-    
-
     Va_target = Va_trim;
     
     %[deltaT, deltaE] = newPID(eta, nu, ConstStruct, Va_target, height_target);
@@ -343,36 +253,26 @@ for i = 1:iterations
     modelNoise = 0.1*sin(t(i));
     nu_dot = dynamicModel(nu,eta,u_action,ConstStruct, LUT, modelNoise);
     
-    nu(1:2) = nu(1:2) - wind;
+    nu(1:2) = nu(1:2);
     eta_dot = nu2eta_dot(nu,theta);
 
     eta = eta + eta_dot*h;
     nu = nu + nu_dot*h;
-
+    
+    % Comment out to remove live animation
 %     if mod(i,2)==0
 %         anim=anim.update(eta);
 %         %anim_lin = anim_lin.update(eta_lin);
 %     end
 
+    if mod(i,1000)==0
+        disp(['Iteration: ' num2str(i) ' of ' num2str(iterations)])
+    end
 
-    % numerically integrate
-    weights(:,i+1) = weights(:,i) + Wdot'*h;
     vs(:,i+1) = vs(:,i) + vdot'*h;
     ref(:,i+1) = ref(:,i) + rdot*h;
     nus(:,i+1) = nu;
     etas(:,i+1) = eta;
-
-%     if i > 1 && abs(errors(i)-errors(i-1)) > 0.01
-%         disp(['Large error change. Itr: ' num2str(i) ' Value: ' num2str(abs(errors(i)-errors(i-1)))])
-%     end
-    modFac = 1000;
-    if mod(i, modFac)==0
-        meanError = mean(errors(i-modFac+1:i));
-        disp(['alpha: ' num2str(rad2deg(alpha))])
-        disp([num2str(i/modFac) ' of ' num2str(iterations/modFac) ' (' num2str(100*i/iterations) '%)' ' Error: ' num2str(meanError)])
-    end
-    %pause(h); %This relates to the perceived time spent in the simulation. Relate to time t. TODO
-
 end
 nonAdaptMeanError = 0.5323;
 fprintf(['[\b' 'Mean error: ' num2str(mean(errors)) ']\b\n'])

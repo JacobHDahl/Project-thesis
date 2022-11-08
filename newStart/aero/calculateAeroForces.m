@@ -1,4 +1,4 @@
-function [FAERO_X, FAERO_Z, M_aero] = calculateAeroForces(nu,ConstStruct,deltaE,linear,LUT)
+function [FAERO_X, FAERO_Z, M_aero] = calculateAeroForces(nu,ConstStruct,deltaE,linear, LUT)
 c = ConstStruct.c;
 rho = ConstStruct.rho;
 S = ConstStruct.S;

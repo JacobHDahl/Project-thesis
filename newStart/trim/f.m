@@ -61,7 +61,7 @@ FTHRUST_X = 0.5*S_prop*C_prop*((k_motor*deltaT)^2-Va^2);
 FG_X = -m*g*sin(theta);
 FG_Z = m*g*cos(theta);
 
-linear = 0; %toggle to select linear or non-linear aero-model
+linear = 1; %toggle to select linear or non-linear aero-model
 [FAERO_X,FAERO_Z, M_aero] = calculateAeroForces(nu,ConstStruct,deltaE,linear);
 
 fx = FG_X + FTHRUST_X + FAERO_X ;
